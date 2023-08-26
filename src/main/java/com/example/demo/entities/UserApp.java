@@ -22,7 +22,7 @@ public class UserApp {
 	private String Username;
 	private String Password;
 	private String Description;
-	private Date DateCreated;
+	private String Roles = "USER";
 	public String getUsername() {
 		return Username;
 	}
@@ -41,11 +41,11 @@ public class UserApp {
 	public void setDescription(String description) {
 		Description = description;
 	}
-	public Date getDateCreated() {
-		return DateCreated;
+	public String getRoles() {
+		return Roles;
 	}
-	public void setDateCreated(Date dateCreated) {
-		DateCreated = dateCreated;
+	public void setRoles(String roles) {
+		Roles = roles;
 	} 
 	
 	
