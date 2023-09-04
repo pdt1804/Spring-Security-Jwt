@@ -1,10 +1,35 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="ISO-8859-1">
-<title>Insert title here</title>
-</head>
-<body>
-	<p>Login Page</p>
-</body>
+<html xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<meta charset="ISO-8859-1">
+		<title>Log in</title>
+	</head>
+	<body>
+		<div class="form">
+			<div class="title">
+				<h1>Login Account</h1>
+			</div>
+			<div class="inputform">
+				<Form method="post" th:action="@{/Home}" th:object="${User}">
+					<div class="inputUsername">
+						<label>Username: </label>
+						<input type="text" placeholder="username" th:field="*{username}"/>
+					</div>
+					<div class="inputPassword">
+						<label>Password: </label>
+						<input type="password" placeholder="password" th:field="*{password}"/>
+					</div>
+					<div class="Register">
+						<a th:href="@{/SignUp}">Click here to sign up</a>
+					</div>
+					<div th:if="${Error}" class="error">
+  					    <h3 th:text="${Error}"></h3>
+					</div>
+					<div class="LogIn">
+						<Input type="submit" Value="Login"/>
+					</div>
+				</Form>
+			</div>
+		</div>
+	</body>
 </html>
