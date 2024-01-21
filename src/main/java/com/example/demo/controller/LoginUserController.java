@@ -14,6 +14,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.config.UserAppUserDetailService;
@@ -28,9 +31,14 @@ import com.example.demo.config.UserAppUserDetails;
 import com.example.demo.entities.AuthRequest;
 import com.example.demo.entities.UserApp;
 import com.example.demo.services.JwtService;
+import com.example.demo.services.ResourceStoredService;
 import com.example.demo.services.UserService;
 
-@Controller
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@RestController
 public class LoginUserController {
 	
 	@Autowired
@@ -43,84 +51,93 @@ public class LoginUserController {
 	private JwtService jwtService;
 	
 	@Autowired
+	private ResourceStoredService resourceStoredService;
+	
+	@Autowired
 	private AuthenticationManager authenticationManager;
 	
-	private Boolean Authenticated(String token, UserDetails user)
+	@Autowired
+    private PasswordEncoder passwordEncoder;
+	
+	public String getUserName(HttpServletRequest request) // Get JWT from Authorization
 	{
-		return jwtService.validateToken(token, userAppUserDetailService.loadUserByUsername(jwtService.extractUsername(token)));
+		var authHeader = request.getHeader("Authorization");
+		if (authHeader.startsWith("Bearer "))
+		{
+			return jwtService.extractUsername(authHeader.substring(7));
+		}
+		return null;
 	}
 	
-	@GetMapping("/")
-	public String LoginPage(Model model)
-	{
-		System.out.println("test");
-		model.addAttribute("User", new AuthRequest());
-		return "Login";
-	}
-	
-	@GetMapping("/Home")
-	public String HomePage(Model model)
-	{
-		try 
-		{
-			String token = jwtService.getExistingToken();
-			UserDetails user = userAppUserDetailService.loadUserByUsername(jwtService.extractUsername(token));
-			if (Authenticated(token, user))
-			{
-				return "Home";			
-			}
-			else
-			{
-				return "Login";
-			}
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-			return "redirect:/";
-		}
-	}
-
-	@GetMapping("/Account")
-	public String Account(Model model)
-	{
-		try 
-		{
-			String token = jwtService.getExistingToken();
-			UserDetails user = userAppUserDetailService.loadUserByUsername(jwtService.extractUsername(token));
-			if (Authenticated(token, user))
-			{
-				return "Account";			
-			}
-			else
-			{
-				return "Login";
-			}
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-			return "redirect:/";
-		}
-	}
-	
-	@PostMapping("/Home")
-    public String authenticateAndGetToken(@ModelAttribute ("User") AuthRequest authRequest, Model model) {
+	@GetMapping("/Authenticate")
+    public String authenticateAndGetToken(@RequestParam("userName") String userName, @RequestParam("passWord") String passWord, HttpServletRequest request, HttpServletResponse response) 
+    {	
 		try
 		{
-	        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword()));
-	        if (authentication.isAuthenticated()) {
-	            jwtService.setExistingToken(jwtService.generateToken(authRequest.getUsername()));
-	            return HomePage(model);
-	        } else {
-	            throw new UsernameNotFoundException("invalid user request !");
-	        }
+			String authen = userService.Authenticate(userName, passWord);
+			
+			if (authen.equals("Failed"))
+			{
+				return "Failed";	
+			}
+			else
+			{
+				Cookie cookie = new Cookie("token" + userName, userService.Authenticate(userName, passWord));
+				response.addCookie(cookie);
+				return "Successful";
+			}
 		} 
 		catch (Exception e)
 		{
 			e.printStackTrace();
-			return "redirect:/";
-		}
+			return "Failed";	
+		}	
+	}
+	
+	@GetMapping("/GetUserInformation")
+    public UserApp GetUserInformation(HttpServletRequest request) 
+    {	
+		try
+		{
+			String userName = getUserName(request);
+			
+			if (userName == null)
+			{
+				return null; // invalid
+			}
+			else
+			{
+				var cookies = request.getCookies();
+				
+				for (var cookie : cookies)
+				{
+					if (cookie.getName().equals("token" + userName))
+					{
+						return userService.GetUserByUsername(userName);
+					}
+				}	
+				
+				return null;
+			}
+		} 
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			return null;	
+		}	
+	}
+	
+	@PostMapping("/CreateUser")
+    public void CreateUser(@RequestParam("userName") String userName, @RequestParam("passWord") String passWord) 
+	{	
+		try
+		{
+	        userService.AddUser(new UserApp(userName, passWord, null, "ADMIN"));
+		} 
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}	
 	}
 	
 	

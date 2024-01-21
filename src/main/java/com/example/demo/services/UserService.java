@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,12 @@ public class UserService {
 	
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+	private JwtService jwtService;
+    
+    @Autowired
+	private AuthenticationManager authenticationManager;
 	
 	public List<UserApp> GetAllUser()
 	{
@@ -30,11 +39,25 @@ public class UserService {
 		return user.get();
 	}
 	
+	public String Authenticate(String userName, String passWord)
+	{
+		Authentication authenticate = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userName, passWord));
+		
+		if (authenticate.isAuthenticated())
+		{
+			return jwtService.generateToken(userName);
+		}
+		return "Failed";
+	}
+	
 	public void AddUser(UserApp user)
 	{
 		try
 		{
-			user.setPassword(passwordEncoder.encode(user.getPassword()));
+			System.out.println(user.getPassword());
+			var pass = passwordEncoder.encode(user.getPassword());
+			System.out.println(pass);
+			user.setPassword(pass);
 			userRepo.save(user);
 
 		}
